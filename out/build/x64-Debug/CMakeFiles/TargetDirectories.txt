@@ -1,0 +1,3 @@
+C:/Users/kristina.stoyanova/CLionProjects/C8-zadacha/out/build/x64-Debug/CMakeFiles/rebuild_cache.dir
+C:/Users/kristina.stoyanova/CLionProjects/C8-zadacha/out/build/x64-Debug/CMakeFiles/C8_zadacha.dir
+C:/Users/kristina.stoyanova/CLionProjects/C8-zadacha/out/build/x64-Debug/CMakeFiles/edit_cache.dir
