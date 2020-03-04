@@ -1,154 +1,148 @@
 #include <iostream>
-#include <climits>
+#include <limits>
 #include <iomanip>
+#include <vector>
+
 using namespace std;
 
-// Number of vertices in the adjMatrix
+// Number of nodes
 #define N 3
+float minTime = numeric_limits<float>::max();
 
-/*bool burntMatches [N][N] {
-        {true  , false , true  , true  , false },
-        {false , true  , false , true  , true  },
-        {true  , false , true  , false , false },
-        {true  , true  , false , true  , false },
-        {false , true  , false , false , true  }
-};*/
-bool burntMatches [N][N]
-{
-        {true  , false , false},
-        {false  , true , false},
-        {false  , false , true}
+struct Node {
+    float X;
+    float Y;
+    bool isBurning;
+    vector<Node> nodesConnected;
 };
 
-// Recursive Function to print path of given
-// vertex u from source vertex v
-void printPath(int path[][N], int v, int u)
-{
-    if (path[v][u] == v)
-        return;
-    burntMatches[v][u] = true;
-    printPath(path, v, path[v][u]);
-    cout << path[v][u] << " ";
+struct Match {
+    Node node1;
+    Node node2;
+    float timeToBurn;
+    float timeAlreadyBurnt;
+    float percentBurned;
+};
+
+bool seeIfContainsNode(const vector<Node> &nodes, const Node &node) {
+    float X, Y;
+    for (const Node &n: nodes) {
+        X = node.X;
+        Y = node.Y;
+        if (X == n.X && Y == n.Y) {
+            return true;
+        }
+    }
+    return false;
 }
 
-// Function to print the shortest cost with path
-// information between all pairs of vertices
-void printSolution(int cost[N][N], int path[N][N])
-{
-    for (int v = 0; v < N; v++)
-    {
-        for (int u = 0; u < N; u++)
-        {
-            if (cost[v][u] == INT_MAX)
-                cout << setw(4) << "inf";
-            else
-                cout << setw(4) << cost[v][u];
-        }
-        cout << endl;
-    }
+vector<Match> step(const vector<Match> &figure, const vector<Node> &nodes) {
+    Node node1, node2;
+    Node startingNode = nodes[2];
+    vector<Node> tempList;
+    vector<Match> matchList;
 
-    cout << endl;
-    for (int v = 0; v < N; v++)
-    {
-        for (int u = 0; u < N; u++)
-        {
-            if (u != v && path[v][u] != -1)
-            {
-                cout << "Shortest Path from vertex " << v <<
-                     " to vertex " << u << " is (" << v << " ";
-                printPath(path, v, u);
-                cout << u << ")" << endl;
-            }
-        }
-    }
-}
+    //cout << minTime << endl;
 
-// Function to run Floyd-Warshell algorithm
-void FloydWarshell(int adjMatrix[][N])
-{
-    // cost[] and parent[] stores shortest-path
-    // (shortest-cost/shortest route) information
-    int cost[N][N], path[N][N];
-
-    // initialize cost[] and parent[]
-    for (int v = 0; v < N; v++)
-    {
-        for (int u = 0; u < N; u++)
-        {
-            // initally cost would be same as weight
-            // of the edge
-            cost[v][u] = adjMatrix[v][u];
-
-            if (v == u)
-                path[v][u] = 0;
-            else if (cost[v][u] != INT_MAX)
-                path[v][u] = v;
-            else
-                path[v][u] = -1;
+    for (const Node &node : nodes) {
+        if (node.X == startingNode.X && node.Y == startingNode.Y) {
+            tempList = node.nodesConnected;
         }
     }
 
-    // run Floyd-Warshell
-    for (int k = 0; k < N; k++)
-    {
-        for (int v = 0; v < N; v++)
-        {
-            for (int u = 0; u < N; u++)
-            {
-                // If vertex k is on the shortest path from v to u,
-                // then update the value of cost[v][u], path[v][u]
-
-                if (cost[v][k] != INT_MAX && cost[k][u] != INT_MAX
-                    && cost[v][k] + cost[k][u] < cost[v][u])
-                {
-                    cost[v][u] = cost[v][k] + cost[k][u];
-                    path[v][u] = path[k][u];
+    if (!tempList.empty()) {
+        for (const Node &node: tempList) {
+            for (const Match &match: figure) {
+                node1 = match.node1;
+                node2 = match.node2;
+                if ((node.X == node1.X && node.Y == node1.Y) || (node.X == node2.X && node.Y == node2.Y)) {
+                    matchList.push_back(match);
                 }
-
-
             }
+        }
 
-            // if diagonal elements become negative, the
-            // graph contains a negative weight cycle
-            if (cost[v][v] < 0)
-            {
-                cout << "Negative Weight Cycle Found!!";
-                return;
+        for (const Match &m : matchList) {
+            if (m.timeToBurn < minTime) {
+                minTime = m.timeToBurn;
             }
         }
     }
+   // cout << minTime;
 
-    // Print the shortest path between all pairs of vertices
-    printSolution(cost, path);
+    return matchList;
 }
 
 // main function
-int main()
-{
-    // given adjacency representation of matrix
-    int adjMatrix[N][N] = {
-            {0,1,3},
-            {1,0,1},
-            {3,1,0}
+int main() {
+    vector<Node> nodes{
+            {0, 0, false},
+            {2, 0, false},
+            {1, 2, false},
+            {3, 2, false}
     };
 
-    // Run Floyd Warshell algorithm
-    FloydWarshell(adjMatrix);
-    for(auto& rows: burntMatches) // Iterating over rows
-    {
-        for(auto& elem: rows)
-        {
-            cout << (elem ? "true" : "false") << "  ";
-            // do some stuff
+    vector<Match> figure =
+            {
+                    {nodes[0], nodes[1], 3,   0, 0},
+                    {nodes[0], nodes[2], 1,   0, 0},
+                    {nodes[2], nodes[1], 1,   0, 0},
+                    {nodes[3], nodes[2], 0.5, 0, 0}
+            };
+
+    Node node1, node2;
+    float X, Y;
+
+
+    for (int i = 0; i < nodes.size(); i++) {
+        vector<Node> nodesConnected;
+        X = nodes[i].X;
+        Y = nodes[i].Y;
+        for (const Match &match: figure) {
+            node1 = match.node1;
+            node2 = match.node2;
+            if (seeIfContainsNode(nodes[i].nodesConnected, node1) ||
+                seeIfContainsNode(nodes[i].nodesConnected, node2)) {
+                continue;
+            }
+            if (X == node1.X && Y == node1.Y) {
+                nodesConnected.push_back(node2);
+                continue;
+            }
+            if (X == node2.X && Y == node2.Y) {
+                nodesConnected.push_back(node1);
+            }
         }
-        cout << endl;
+        nodes[i].nodesConnected = nodesConnected;
     }
+
+    float totalTime = 0;
+    vector<Match> tempMatchList;
+
+    tempMatchList = step(figure, nodes);
+    if(totalTime == 0) {
+        totalTime = totalTime + minTime;
+        for(Match match: tempMatchList){
+            for(int i = 0; i < figure.size(); i++){
+                if(match.node1.X == figure[i].node1.X && match.node1.Y == figure[i].node1.Y){
+                    figure[i].timeAlreadyBurnt = minTime;
+                    figure[i].percentBurned = (minTime/figure[i].timeToBurn);
+                }
+            }
+        }
+    }
+    minTime = numeric_limits<float>::max();
+
+    for(Match match1: figure){
+        cout<<match1.percentBurned<<endl;
+    }
+
+    /*for (const Node &n: nodes) {
+        cout << "NODE (X, Y): ( " << n.X << ", " << n.Y << " )";
+        cout << "NODES CONNECTED:" << endl;
+        cout << "List size " << n.nodesConnected.size() << endl;
+        for (const Node &np: n.nodesConnected) {
+            cout << "       NODE (X, Y): ( " << np.X << ", " << np.Y << " )" << endl;
+        }
+    }*/
     return 0;
 }
-/*    int adjMatrix[N][N] = {
-                        {0      , 4      , INT_MAX, INT_MAX, 1      },
-                        {4      , 0      , 1      , INT_MAX, INT_MAX},
-                        {INT_MAX, 1      , 0      , 2      , 1      },
-                        {INT_MAX, INT_MAX, 2      , 0      , 2      },
-                        {1      , INT_MAX, 1      , 2      , 0      }
-    };*/
