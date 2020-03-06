@@ -1,6 +1,5 @@
 #include <iostream>
 #include <limits>
-#include <iomanip>
 #include <vector>
 #include <map>
 
@@ -17,14 +16,22 @@ struct Node {
     vector<Node> nodesConnected;
 };
 
-//todo consider deleting time already burnt
 struct Match {
     Node *node1;
     Node *node2;
-    float timeToBurn;
+    float timeNeededToBurn;
     float timeAlreadyBurnt;
-    float percentBurned;
+    bool isFullyBurnt;
 };
+
+bool areAllMatchesBurnt(const vector<Match> &figure) {
+    for (Match match : figure) {
+        if (match.timeNeededToBurn != match.timeAlreadyBurnt) {
+            return false;
+        }
+    }
+    return true;
+}
 
 bool seeIfContainsNode(const vector<Node> &nodes, const Node &node) {
     float X, Y;
@@ -56,6 +63,7 @@ vector<Match> step(const vector<Match> &figure, Node *pStartingNode) {
     vector<Node> tempList;
     vector<Match> matchList;
 
+
     for (const Match &match: figure) {
         node1 = *match.node1;
         node2 = *match.node2;
@@ -66,19 +74,22 @@ vector<Match> step(const vector<Match> &figure, Node *pStartingNode) {
     }
 
     for (const Match &m : matchList) {
-        if (m.percentBurned != 1) {
+/*        cout << m.timeNeededToBurn <<endl;
+        cout << m.timeAlreadyBurnt <<endl;
+        cout << "--------------------" <<endl;*/
+        if (m.timeNeededToBurn != m.timeAlreadyBurnt) {
             if (m.node1->isBurnt && m.node2->isBurnt) {
-                if (((m.timeToBurn - (m.timeToBurn * m.percentBurned)) / 2) < minTime) {
-                    minTime = (m.timeToBurn - (m.timeToBurn * m.percentBurned)) / 2;
+                if (((m.timeNeededToBurn - m.timeAlreadyBurnt) / 2) < minTime) {
+                    minTime = (m.timeNeededToBurn - m.timeAlreadyBurnt) / 2;
                 }
             } else {
-                if ((m.timeToBurn - (m.timeToBurn * m.percentBurned)) < minTime) {
-                    minTime = m.timeToBurn - (m.timeToBurn * m.percentBurned);
+                if ((m.timeNeededToBurn - m.timeAlreadyBurnt) < minTime) {
+                    minTime = m.timeNeededToBurn - m.timeAlreadyBurnt;
                 }
             }
+          //  cout << minTime << endl;
         }
     }
-    //cout << minTime << endl;
 
     return matchList;
 }
@@ -113,9 +124,19 @@ void fillNodesConnected(vector<Node> *nodes, const vector<Match> &figure) {
 void burnMatches(vector<Match> *tempMatchList, vector<Match> *figure) {
     for (Match match: *tempMatchList) {
         for (auto &m : *figure) {
+            if (m.timeAlreadyBurnt == m.timeNeededToBurn)
+                continue;
             if (match.node1->X == m.node1->X && match.node1->Y == m.node1->Y) {
+                if (m.node1->isBurnt && m.node2->isBurnt) {
+                    cout << "enter" <<endl;
+                    cout << " node 1 (x,y): " << m.node1->X << ", " << m.node1->Y << endl;
+                    cout << " node 2 (x,y): " << m.node2->X << ", " << m.node2->Y << endl;
+                    cout << minTime << endl;
+                    m.timeAlreadyBurnt += (minTime * 2);
+                    continue;
+                }
+
                 m.timeAlreadyBurnt += minTime;
-                m.percentBurned += (minTime / m.timeToBurn);
             }
         }
     }
@@ -123,11 +144,12 @@ void burnMatches(vector<Match> *tempMatchList, vector<Match> *figure) {
 
 void burnNodes(vector<Match> *figure, vector<Node *> *burningNodes) {
     for (auto &m : *figure) {
-        //cout << m.percentBurned << endl;
-        if (m.percentBurned > 1) {
-            cout << "BIGGER THAN ONE!!!" << endl;
-        }
-        if (m.percentBurned == 1) {
+/*        if (m.timeAlreadyBurnt > m.timeNeededToBurn) {
+            cout << "BIGGER THAN ONE!!!" << m.timeAlreadyBurnt << endl;
+            cout << " node 1 (x,y): " << m.node1->X << ", " << m.node1->Y << endl;
+            cout << " node 2 (x,y): " << m.node2->X << ", " << m.node2->Y << endl;
+        }*/
+        if (m.timeAlreadyBurnt == m.timeNeededToBurn) {
             m.node1->isBurnt = true;
             m.node2->isBurnt = true;
 
@@ -152,10 +174,10 @@ int main() {
 
     vector<Match> figure =
             {
-                    {&nodes[0], &nodes[1], 1,   0, 0},
-                    {&nodes[0], &nodes[2], 3,   0, 0},
-                    {&nodes[2], &nodes[1], 1,   0, 0},
-                    {&nodes[3], &nodes[2], 0.5, 0, 0}
+                    {&nodes[0], &nodes[1], 1,   0, false},
+                    {&nodes[0], &nodes[2], 3,   0, false},
+                    {&nodes[2], &nodes[1], 1,   0, false},
+                    {&nodes[3], &nodes[2], 0.5, 0, false}
             };
 
     float totalTime = 0;
@@ -172,7 +194,8 @@ int main() {
     startingNode->isBurnt = true;
 
     //starting burning from starting node
-    tempMatchList = step(figure, startingNode); //-> finds min Time of next step returns matches connected to 'startingNode'
+    tempMatchList = step(figure,
+                         startingNode); //-> finds min Time of next step returns matches connected to 'startingNode'
     totalTime = totalTime + minTime;
 
     //burns percent of matches
@@ -181,27 +204,31 @@ int main() {
     //burns nodes
     burnNodes(&figure, &burningNodes);
 
-    cout << burningNodes.size() << endl;
+   // cout << minTime << endl;
+    cout << "start"<< endl;
+    int i = 0;
+    while (!areAllMatchesBurnt(figure)) {
+        for (Node *node: burningNodes) {
+            nodeVectorMap.insert({node, step(figure, node)});
+        }
+        //cout << nodeVectorMap.size() << endl;
+        cout << "end" << endl;
+        cout << figure[1].timeAlreadyBurnt << endl;
+        cout << "--------------------" <<endl;
 
-    for (Node *node: burningNodes) {
-        nodeVectorMap.insert({node, step(figure, node)});
+        for (auto &nvm: nodeVectorMap) {
+            burnMatches(&nvm.second, &figure);
+            burnNodes(&figure, &burningNodes);
+        }
+        totalTime += minTime;
+
+        //cout << totalTime << endl;
+
+        minTime = numeric_limits<float>::max();
+        nodeVectorMap.clear();
+
     }
-    cout << minTime << endl;
+    cout << totalTime;
 
-    minTime = numeric_limits<float>::max();
-
-
-
-
-/*    for (const Match &match1: figure) {
-        cout << (match1.node1->isBurnt ? "true-1" : "false1");
-
-        cout << " node 1 (x,y): " << match1.node1->X << ", " << match1.node1->Y << endl;
-
-        cout << (match1.node2->isBurnt ? "true-2" : "false2");
-
-        cout << " node 2 (x,y): " << match1.node2->X << ", " << match1.node2->Y << endl;
-
-    }*/
     return 0;
 }
