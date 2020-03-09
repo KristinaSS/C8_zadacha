@@ -2,6 +2,8 @@
 #include <limits>
 #include <vector>
 #include <map>
+#include <string>
+#include <sstream>
 
 using namespace std;
 
@@ -9,8 +11,8 @@ using namespace std;
 double minTime = numeric_limits<double>::max();
 
 struct Node {
-    float X{};
-    float Y{};
+    double X{};
+    double Y{};
     bool isBurnt{};
     bool isNew{};
     vector<Node> nodesConnected;
@@ -24,7 +26,15 @@ struct Match {
     bool hasBurnedDuringRound;
 };
 
-void findMinTime(const vector<Match>& matchList){
+Node *findNode(double x, double y, vector<Node> *nodes) {
+    for (auto &node : *nodes) {
+        if (node.X == x && node.Y == y)
+            return &node;
+    }
+    return nullptr;
+}
+
+void findMinTime(const vector<Match> &matchList) {
     for (Match m : matchList) {
 
         if (m.timeNeededToBurn < m.timeAlreadyBurnt) {
@@ -47,7 +57,7 @@ void findMinTime(const vector<Match>& matchList){
     }
 }
 
-void initializeMatchList(const vector<Match> &figure, const Node& startingNode, vector<Match> *matchList){
+void initializeMatchList(const vector<Match> &figure, const Node &startingNode, vector<Match> *matchList) {
     Node node1, node2;
     for (Match match: figure) {
         node1 = *match.node1;
@@ -63,19 +73,20 @@ vector<Match> step(const vector<Match> &figure, Node *pStartingNode) {
     Node startingNode = *pStartingNode;
     vector<Match> matchList;
 
-    initializeMatchList(figure,startingNode,&matchList);
+    initializeMatchList(figure, startingNode, &matchList);
     findMinTime(matchList);
 
     return matchList;
 }
 
-void initalizeNodeVectorMap(vector<Node *> *burningNodes, map<Node *, vector<Match >> *nodeVectorMap, const vector<Match>& figure){
+void initalizeNodeVectorMap(vector<Node *> *burningNodes, map<Node *, vector<Match >> *nodeVectorMap,
+                            const vector<Match> &figure) {
     for (Node *node: *burningNodes) {
         nodeVectorMap->insert({node, step(figure, node)});
     }
 }
 
-void resetingForBegOFCycle(vector<Match>*figure, vector<Node> *nodes){
+void resetingForBegOFCycle(vector<Match> *figure, vector<Node> *nodes) {
     minTime = numeric_limits<double>::max();
     for (auto &i : *figure) {
         i.hasBurnedDuringRound = false;
@@ -85,11 +96,14 @@ void resetingForBegOFCycle(vector<Match>*figure, vector<Node> *nodes){
     }
 }
 
-void printFigure(vector<Match>figure,double totalTime){
+void printFigure(vector<Match> figure, double totalTime) {
     cout << "--------------------" << endl;
     cout << "+ min time: " << minTime << endl;
     for (int i = 0; i < figure.size(); i++) {
-        cout << "fig [" << i << "]: " << figure[i].timeAlreadyBurnt << endl;
+        cout << "fig [" << i << "]: " << figure[i].timeAlreadyBurnt
+        << " cooridinates Node 1 (x,y): " << figure[i].node1->X << ", " << figure[i].node1->Y
+        << " cooridinates Node 2 (x,y): " << figure[i].node2->X << ", " << figure[i].node2->Y << endl;
+        cout << "addresss printFigure Node (x,y): " << &figure[i].node1 << ",  " <<&figure[i].node2 << endl;
     }
     cout << "total time: " << totalTime << endl;
 }
@@ -125,6 +139,19 @@ bool seeIfContainsNode(const vector<Node *> &nodes, const Node &node) {
         }
     }
     return false;
+}
+
+Node *addIfDoesntNodeExists(double x, double y, vector<Node> *nodes) {
+    cout<< "x: "<< x   ;
+    cout<< "  y: "<< y << endl;
+    Node node = {x, y, false, false};
+    cout<< "x: "<< node.X   ;
+    cout<< "  y: "<< node.Y << endl;
+    if (!seeIfContainsNode(*nodes, node)) {
+        nodes->push_back(node);
+        return &nodes->back();
+    }
+    return findNode(x, y, nodes);
 }
 
 void fillNodesConnected(vector<Node> *nodes, const vector<Match> &figure) {
@@ -195,52 +222,74 @@ void burnNodes(vector<Match> *figure, vector<Node *> *burningNodes) {
     }
 }
 
-void burnMatchesAndNodesInMap(vector<Node *> *burningNodes, map<Node *, vector<Match >> *nodeVectorMap, vector<Match> *figure){
+void burnMatchesAndNodesInMap(vector<Node *> *burningNodes, map<Node *, vector<Match >> *nodeVectorMap,
+                              vector<Match> *figure) {
     for (auto &nvm: *nodeVectorMap) {
         burnMatches(nvm.second, figure);
         burnNodes(figure, burningNodes);
     }
 }
 
-void resetFigureAndNodes(vector<Match> *figure, vector<Node> *nodes){
-    for(auto & l : *figure){
+void resetFigureAndNodes(vector<Match> *figure, vector<Node> *nodes) {
+    for (auto &l : *figure) {
         l.timeAlreadyBurnt = 0;
     }
-    for(auto & l : *nodes){
+    for (auto &l : *nodes) {
         l.isBurnt = false;
         l.isNew = false;
     }
 }
+
+vector<double> split(const string& str, char delimiter) {
+    vector<double> internal;
+    stringstream ss(str); // Turn the string into a stream.
+    string tok;
+
+    while (getline(ss, tok, delimiter)) {
+        internal.push_back(stod(tok));
+    }
+
+    return internal;
+}
+
 // main function
 int main() {
-    //initalizing vectors
-    vector<Node> nodes{
-            {0, 0, false},//0
-            {2, 2, false},//1
-            {4, 0, false},//2
-            {6, 2, false},//3
-            {8, 2, false},//4
-            {9, 3, false},//5
-            {9, 2, false}//6
-    };
-
-    vector<Match> figure =
-            {
-                    {&nodes[0], &nodes[1], 4,  0, false},//0
-                    {&nodes[0], &nodes[2], 4,  0, false},//1
-                    {&nodes[2], &nodes[1], 5,  0, false},//2
-                    {&nodes[3], &nodes[2], 1,  0, false},//3
-                    {&nodes[3], &nodes[1], 7,  0, false},//4
-                    {&nodes[3], &nodes[4], 3,  0, false},//5
-                    {&nodes[4], &nodes[5], 3,  0, false},//6
-                    {&nodes[4], &nodes[6], 2,  0, false},//7
-                    {&nodes[5], &nodes[6], 10, 0, false} //8
-            };
-
-
+    int numberOfMatches;
+    vector<Match> figure;
+    vector<Node> nodes;
+    vector<double> splitLine;
+    string line;
     map<Node *, double> nodeResultMap;
+    Node *pNode1, *pNode2;
 
-    for (int k = 0; k < nodes.size(); k++) {
+    //initalize vectors
+    cout << "Kolko kebriteni klechki shte izpolzvate?" << endl;
+    getline(cin, line);
+    numberOfMatches = std::stoi(line);
+
+    for (int a = 0; a < numberOfMatches; a++) {
+        cout << "Vuvedi Klechka: " << endl;
+        getline(cin, line);
+        splitLine = split(line, ' ');
+        pNode1 = addIfDoesntNodeExists(splitLine[0], splitLine[1], &nodes);
+        pNode2 = addIfDoesntNodeExists(splitLine[2], splitLine[3], &nodes);
+        cout << "addresss 0 Node (x,y): " << pNode1 << ",  " <<pNode2 << endl;
+        pNode1 = findNode(splitLine[0], splitLine[1], &nodes);
+        pNode2 = findNode(splitLine[0], splitLine[1], &nodes);
+        cout << "addresss 0 Node (x,y): " << pNode1 << ",  " <<pNode2 << endl;
+
+        figure.push_back({pNode1,pNode2,splitLine[4], 0, false});
+
+        cout << "addresss 0 Node (x,y): " << &figure[0].node1 << ",  " <<&figure[0].node2 << endl;
+
+    }
+/*    for(const Node& node: nodes){
+        cout << " cooridinates Node 1 (x,y): " << node.X << ", " << node.Y << endl;
+    }*/
+
+    printFigure(figure, 0);
+
+/*    for (int k = 0; k < nodes.size(); k++) {
         double totalTime = 0;
         vector<Match> tempMatchList;
         vector<Node *> burningNodes;
@@ -268,12 +317,12 @@ int main() {
         //burns nodes
         burnNodes(&figure, &burningNodes);
 
-        printFigure(figure,totalTime);
+        printFigure(figure, totalTime);
 
         while (!areAllMatchesBurnt(figure)) {
             resetingForBegOFCycle(&figure, &nodes);
 
-            initalizeNodeVectorMap(&burningNodes,&nodeVectorMap, figure);
+            initalizeNodeVectorMap(&burningNodes, &nodeVectorMap, figure);
 
             burnMatchesAndNodesInMap(&burningNodes, &nodeVectorMap, &figure);
 
@@ -284,17 +333,39 @@ int main() {
             printFigure(figure, totalTime);
         }
         cout << "--------------------" << endl;
-        cout << " adding total time: " << totalTime<<endl;
-        nodeResultMap.insert({&nodes.at(k),totalTime});
+        cout << " adding total time: " << totalTime << endl;
+        nodeResultMap.insert({&nodes.at(k), totalTime});
 
         resetFigureAndNodes(&figure, &nodes);
     }
     cout << "--------------------" << endl;
 
     int j = 0;
-    for(auto &nrm: nodeResultMap){
-        cout<< j << ": " << nrm.second<< " "<<endl;
+    for (auto &nrm: nodeResultMap) {
+        cout << j << ": " << nrm.second << " " << endl;
         j++;
-    }
+    }*/
     return 0;
 }
+/*    vector<Node> nodes{
+            {0, 0, false},//0
+            {2, 2, false},//1
+            {4, 0, false},//2
+            {6, 2, false},//3
+            {8, 2, false},//4
+            {9, 3, false},//5
+            {9, 2, false}//6
+    };
+
+    vector<Match> figure =
+            {
+                    {&nodes[0], &nodes[1], 4,  0, false},//0
+                    {&nodes[0], &nodes[2], 4,  0, false},//1
+                    {&nodes[2], &nodes[1], 5,  0, false},//2
+                    {&nodes[3], &nodes[2], 1,  0, false},//3
+                    {&nodes[3], &nodes[1], 7,  0, false},//4
+                    {&nodes[3], &nodes[4], 3,  0, false},//5
+                    {&nodes[4], &nodes[5], 3,  0, false},//6
+                    {&nodes[4], &nodes[6], 2,  0, false},//7
+                    {&nodes[5], &nodes[6], 10, 0, false} //8
+            };*/
