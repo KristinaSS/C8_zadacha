@@ -389,16 +389,16 @@ int main() {
                 figure.push_back({match.node2Index, nodeIndex, match.timeNeededToBurn / 2, 0, false});
                 figure.push_back({match1.node1Index, nodeIndex, match1.timeNeededToBurn / 2, 0, false});
                 figure.push_back({match1.node2Index, nodeIndex, match1.timeNeededToBurn / 2, 0, false});
+
+                if (matchIndex1 != 0 && matchIndex2 != 0) {
+                    figure.erase(figure.begin() + matchIndex1);
+                    if (matchIndex1 < matchIndex2)
+                        matchIndex2 = matchIndex2 - 1;
+                    figure.erase(figure.begin() + matchIndex2);
+                }
             }
         }
     }
-    if (matchIndex1 != 0 && matchIndex2 != 0) {
-        figure.erase(figure.begin() + matchIndex1);
-        if (matchIndex1 < matchIndex2)
-            matchIndex2 = matchIndex2 - 1;
-        figure.erase(figure.begin() + matchIndex2);
-    }
-
     for (int k = 0; k < nodes.size(); k++) {
         double totalTime = 0;
         vector<Match> tempMatchList;
@@ -406,13 +406,16 @@ int main() {
         map<Node *, vector<Match >> nodeVectorMap;
         Node *startingNode = &nodes[k];
 
+        //checks if starting node is a whole number
+        if (floor(nodes[k].X) != nodes[k].X)
+            continue;
+        if (floor(nodes[k].Y) != nodes[k].Y)
+            continue;
+
         //reseting stuff
         resetingForBegOFCycle(&figure, &nodes);
         resetFigureAndNodes(&figure, &nodes);
         minTime = numeric_limits<double>::max();
-
-        if (floor(nodes[k].X) != nodes[k].X)
-            continue;
 
         //printing figure
         //printFigure(figure, totalTime);
