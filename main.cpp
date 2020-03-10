@@ -24,13 +24,73 @@ struct Match {
     double timeNeededToBurn;
     double timeAlreadyBurnt;
     bool hasBurnedDuringRound;
-    bool isNotDiagonal;
 };
+
+double min(double x, double x1);
+
+double max(double x, double x1) {
+    if (x > x1)
+        return x;
+    else
+        return x1;
+}
+
+bool onSegment(const Node &p, const Node &q, const Node &r) {
+    return q.X <= max(p.X, r.X) && q.X >= min(p.X, r.X) &&
+           q.Y <= max(p.Y, r.Y) && q.Y >= min(p.Y, r.Y);
+
+}
+
+double min(double x, double x1) {
+    if (x < x1)
+        return x;
+    else
+        return x1;
+}
+
+int orientation(const Node &p, const Node &q, const Node &r) {
+    double val = (q.Y - p.Y) * (r.X - q.X) -
+                 (q.X - p.X) * (r.Y - q.Y);
+
+    if (val == 0) return 0;  // colinear
+
+    return (val > 0) ? 1 : 2; // clock or counterclock wise
+}
+
+bool doIntersect(const Node &p1, const Node &q1, const Node &p2, const Node &q2) {
+    // Find the four orientations needed for general and
+    // special cases
+    int o1 = orientation(p1, q1, p2);
+    int o2 = orientation(p1, q1, q2);
+    int o3 = orientation(p2, q2, p1);
+    int o4 = orientation(p2, q2, q1);
+
+    // General case
+    if (o1 != o2 && o3 != o4)
+        return true;
+
+    // Special Cases
+    // p1, q1 and p2 are colinear and p2 lies on segment p1q1
+    if (o1 == 0 && onSegment(p1, p2, q1)) return true;
+
+    // p1, q1 and q2 are colinear and q2 lies on segment p1q1
+    if (o2 == 0 && onSegment(p1, q2, q1)) return true;
+
+    // p2, q2 and p1 are colinear and p1 lies on segment p2q2
+    if (o3 == 0 && onSegment(p2, p1, q2)) return true;
+
+    // p2, q2 and q1 are colinear and q1 lies on segment p2q2
+    return o4 == 0 && onSegment(p2, q1, q2);
+}
 
 bool checkIfMatchOverlaps(double x1, double y1, double x2, double y2, const vector<Match> &figure, vector<Node> nodes) {
     for (Match match: figure) {
         if (nodes[match.node1Index].X == x1 && nodes[match.node1Index].Y == y1 && nodes[match.node2Index].X == x2 &&
             nodes[match.node2Index].Y == y2) {
+            return true;
+        }
+        if (nodes[match.node2Index].X == x1 && nodes[match.node2Index].Y == y1 && nodes[match.node1Index].X == x2 &&
+            nodes[match.node1Index].Y == y2) {
             return true;
         }
     }
@@ -42,6 +102,14 @@ int findNodeIndex(double x, double y, const vector<Node> &nodes) {
         if (nodes[i].X == x && nodes[i].Y == y) {
             return i;
         }
+    }
+    return -1;
+}
+
+int findMatchIndex(int node1Index, int node2Index, vector<Match> figure) {
+    for (int i = 0; i < figure.size(); i++) {
+        if (figure[i].node1Index == node1Index && figure[i].node2Index == node2Index)
+            return i;
     }
     return -1;
 }
@@ -261,7 +329,6 @@ int main() {
     vector<double> splitLine;
     string line;
     map<Node *, double> nodeResultMap;
-    bool isNotDiagonal;
     double x1, x2, y1, y2, time;
 
     //initalize vectors
@@ -272,8 +339,6 @@ int main() {
     for (int a = 0; a < numberOfMatches; a++) {
         cout << "Vuvedi Klechka: " << endl;
         cin >> x1 >> y1 >> x2 >> y2 >> time;
-
-        isNotDiagonal = (x1 == x2) || (y1 == y2);
 
         if (checkIfMatchOverlaps(x1, y1, x2, y2, figure, nodes)) {
             cout << "Match overlaps " << endl;
@@ -286,13 +351,55 @@ int main() {
         int nodeIndex1 = findNodeIndex(x1, y1, nodes);
         int nodeIndex2 = findNodeIndex(x2, y2, nodes);
 
-        figure.push_back({nodeIndex1, nodeIndex2, time, 0, false, isNotDiagonal});
+        figure.push_back({nodeIndex1, nodeIndex2, time, 0, false});
+    }
+    vector<Match> copyFigure = figure;
+    double x, y;
+    int matchIndex1 = 0, matchIndex2 = 0, nodeIndex;
+
+    for (Match &match: copyFigure) {
+        for (Match &match1 : copyFigure) {
+            if (nodes[match.node1Index].X == nodes[match1.node1Index].X &&
+                nodes[match.node1Index].Y == nodes[match1.node1Index].Y &&
+                nodes[match.node2Index].X == nodes[match1.node2Index].X &&
+                nodes[match.node2Index].Y == nodes[match1.node2Index].Y) {
+                continue;
+            }
+            if (nodes[match.node2Index].X == nodes[match1.node2Index].X &&
+                nodes[match.node2Index].Y == nodes[match1.node2Index].Y &&
+                nodes[match.node1Index].X == nodes[match1.node1Index].X &&
+                nodes[match.node1Index].Y == nodes[match1.node1Index].Y) {
+                continue;
+            }
+            if (doIntersect(nodes[match.node1Index], nodes[match.node2Index], nodes[match1.node1Index],
+                            nodes[match1.node2Index])) {
+                x = min(nodes[match.node1Index].X, nodes[match.node2Index].X);
+                x = x + 0.5;
+                y = min(nodes[match.node1Index].Y, nodes[match.node2Index].Y);
+                y = y + 0.5;
+
+                nodes.push_back({x, y, false, false});
+
+                nodeIndex = findNodeIndex(x, y, nodes);
+
+                matchIndex1 = findMatchIndex(match.node1Index, match.node2Index, figure);
+                matchIndex2 = findMatchIndex(match1.node1Index, match1.node2Index, figure);
+
+                figure.push_back({match.node1Index, nodeIndex, match.timeNeededToBurn / 2, 0, false});
+                figure.push_back({match.node2Index, nodeIndex, match.timeNeededToBurn / 2, 0, false});
+                figure.push_back({match1.node1Index, nodeIndex, match1.timeNeededToBurn / 2, 0, false});
+                figure.push_back({match1.node2Index, nodeIndex, match1.timeNeededToBurn / 2, 0, false});
+            }
+        }
+    }
+    if (matchIndex1 != 0 && matchIndex2 != 0) {
+        figure.erase(figure.begin() + matchIndex1);
+        if (matchIndex1 < matchIndex2)
+            matchIndex2 = matchIndex2 - 1;
+        figure.erase(figure.begin() + matchIndex2);
     }
 
-
-
     for (int k = 0; k < nodes.size(); k++) {
-
         double totalTime = 0;
         vector<Match> tempMatchList;
         vector<Node *> burningNodes;
@@ -303,6 +410,9 @@ int main() {
         resetingForBegOFCycle(&figure, &nodes);
         resetFigureAndNodes(&figure, &nodes);
         minTime = numeric_limits<double>::max();
+
+        if (floor(nodes[k].X) != nodes[k].X)
+            continue;
 
         //printing figure
         //printFigure(figure, totalTime);

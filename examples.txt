@@ -34,7 +34,7 @@ not connected example:
 overlapping example:
 9
 0 0 2 2 4
-0 0 2 2 4
+2 2 0 0 4
 4 0 2 2 5
 6 2 4 0 1
 6 2 2 2 7
