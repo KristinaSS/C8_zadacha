@@ -19,32 +19,27 @@ struct Node {
 };
 
 struct Match {
-    Node *node1;
-    Node *node2;
+    int node1Index;
+    int node2Index;
     double timeNeededToBurn;
     double timeAlreadyBurnt;
     bool hasBurnedDuringRound;
 };
 
-Node *findNode(double x, double y, vector<Node> *nodes) {
-    for (auto &node : *nodes) {
-        if (node.X == x && node.Y == y)
-            return &node;
+int findNodeIndex(double x, double y, const vector<Node> &nodes) {
+    for (int i = 0; i < nodes.size(); i++) {
+        if (nodes[i].X == x && nodes[i].Y == y) {
+            return i;
+        }
     }
-    return nullptr;
+    return -1;
 }
 
-void findMinTime(const vector<Match> &matchList) {
+void findMinTime(const vector<Match> &matchList, vector<Node> nodes) {
     for (Match m : matchList) {
-
-        if (m.timeNeededToBurn < m.timeAlreadyBurnt) {
-            cout << "node 1  : (x,y) " << m.node1->X << ", " << m.node1->Y << endl;
-            cout << "node 2  : (x,y) " << m.node2->X << ", " << m.node2->Y << endl;
-            cout << "error" << endl;
-        }
-
         if (m.timeNeededToBurn > m.timeAlreadyBurnt) {
-            if (m.node1->isBurnt && m.node2->isBurnt) {
+
+            if (nodes[m.node1Index].isBurnt && nodes[m.node2Index].isBurnt) {
                 if (((m.timeNeededToBurn - m.timeAlreadyBurnt) / 2) < minTime) {
                     minTime = (m.timeNeededToBurn - m.timeAlreadyBurnt) / 2;
                 }
@@ -57,11 +52,12 @@ void findMinTime(const vector<Match> &matchList) {
     }
 }
 
-void initializeMatchList(const vector<Match> &figure, const Node &startingNode, vector<Match> *matchList) {
+void initializeMatchList(const vector<Match> &figure, const Node &startingNode, vector<Match> *matchList,
+                         vector<Node> nodes) {
     Node node1, node2;
     for (Match match: figure) {
-        node1 = *match.node1;
-        node2 = *match.node2;
+        node1 = nodes[match.node1Index];
+        node2 = nodes[match.node2Index];
         if ((startingNode.X == node1.X && startingNode.Y == node1.Y) ||
             (startingNode.X == node2.X && startingNode.Y == node2.Y)) {
             matchList->push_back(match);
@@ -69,25 +65,26 @@ void initializeMatchList(const vector<Match> &figure, const Node &startingNode, 
     }
 }
 
-vector<Match> step(const vector<Match> &figure, Node *pStartingNode) {
+vector<Match> step(const vector<Match> &figure, Node *pStartingNode, const vector<Node> &nodes) {
     Node startingNode = *pStartingNode;
     vector<Match> matchList;
 
-    initializeMatchList(figure, startingNode, &matchList);
-    findMinTime(matchList);
+    initializeMatchList(figure, startingNode, &matchList, nodes);
+    findMinTime(matchList, nodes);
 
     return matchList;
 }
 
 void initalizeNodeVectorMap(vector<Node *> *burningNodes, map<Node *, vector<Match >> *nodeVectorMap,
-                            const vector<Match> &figure) {
+                            const vector<Match> &figure, const vector<Node> &nodes) {
     for (Node *node: *burningNodes) {
-        nodeVectorMap->insert({node, step(figure, node)});
+        nodeVectorMap->insert({node, step(figure, node, nodes)});
     }
 }
 
 void resetingForBegOFCycle(vector<Match> *figure, vector<Node> *nodes) {
     minTime = numeric_limits<double>::max();
+
     for (auto &i : *figure) {
         i.hasBurnedDuringRound = false;
     }
@@ -101,9 +98,7 @@ void printFigure(vector<Match> figure, double totalTime) {
     cout << "+ min time: " << minTime << endl;
     for (int i = 0; i < figure.size(); i++) {
         cout << "fig [" << i << "]: " << figure[i].timeAlreadyBurnt
-        << " cooridinates Node 1 (x,y): " << figure[i].node1->X << ", " << figure[i].node1->Y
-        << " cooridinates Node 2 (x,y): " << figure[i].node2->X << ", " << figure[i].node2->Y << endl;
-        cout << "addresss printFigure Node (x,y): " << &figure[i].node1 << ",  " <<&figure[i].node2 << endl;
+             << endl;
     }
     cout << "total time: " << totalTime << endl;
 }
@@ -118,11 +113,22 @@ bool areAllMatchesBurnt(const vector<Match> &figure) {
 }
 
 bool seeIfContainsNode(const vector<Node> &nodes, const Node &node) {
-    float X, Y;
+    double X, Y;
     for (const Node &n: nodes) {
         X = node.X;
         Y = node.Y;
+
         if (X == n.X && Y == n.Y) {
+
+            return true;
+        }
+    }
+    return false;
+}
+
+bool seeIfContainsNode(const vector<Node> &nodes, double x, double y) {
+    for (const Node &n: nodes) {
+        if (x == n.X && y == n.Y) {
             return true;
         }
     }
@@ -130,7 +136,7 @@ bool seeIfContainsNode(const vector<Node> &nodes, const Node &node) {
 }
 
 bool seeIfContainsNode(const vector<Node *> &nodes, const Node &node) {
-    float X, Y;
+    double X, Y;
     for (const Node *n : nodes) {
         X = node.X;
         Y = node.Y;
@@ -141,52 +147,48 @@ bool seeIfContainsNode(const vector<Node *> &nodes, const Node &node) {
     return false;
 }
 
-Node *addIfDoesntNodeExists(double x, double y, vector<Node> *nodes) {
-    cout<< "x: "<< x   ;
-    cout<< "  y: "<< y << endl;
-    Node node = {x, y, false, false};
-    cout<< "x: "<< node.X   ;
-    cout<< "  y: "<< node.Y << endl;
-    if (!seeIfContainsNode(*nodes, node)) {
-        nodes->push_back(node);
-        return &nodes->back();
+void addIfDoesntNodeExists(double x, double y, vector<Node> *nodes) {
+    if (!seeIfContainsNode(*nodes, x, y)) {
+        nodes->push_back({x, y, false, false});
     }
-    return findNode(x, y, nodes);
 }
 
 void fillNodesConnected(vector<Node> *nodes, const vector<Match> &figure) {
     for (auto &node : *nodes) {
         for (const Match &match: figure) {
-            if (seeIfContainsNode(node.nodesConnected, *match.node1) ||
-                seeIfContainsNode(node.nodesConnected, *match.node2)) {
+            if (seeIfContainsNode(node.nodesConnected, nodes->at(match.node1Index)) ||
+                seeIfContainsNode(node.nodesConnected, nodes->at(match.node2Index))) {
                 continue;
             }
-            if (node.X == match.node1->X && node.Y == match.node1->Y) {
-                node.nodesConnected.push_back(*match.node2);
+            if (node.X == nodes->at(match.node1Index).X && node.Y == nodes->at(match.node1Index).Y) {
+                node.nodesConnected.push_back(nodes->at(match.node2Index));
                 continue;
             }
-            if (node.X == match.node2->X && node.Y == match.node2->Y) {
-                node.nodesConnected.push_back(*match.node1);
+            if (node.X == nodes->at(match.node2Index).X && node.Y == nodes->at(match.node2Index).Y) {
+                node.nodesConnected.push_back(nodes->at(match.node1Index));
             }
         }
     }
 }
 
-void burnMatches(const vector<Match> &matchList, vector<Match> *figure) {
+void burnMatches(const vector<Match> &matchList, vector<Match> *figure, vector<Node> nodes) {
     for (auto &i : *figure) {
         for (Match match: matchList) {
             if (i.timeAlreadyBurnt == i.timeNeededToBurn) {
                 continue;
             }
-            if ((match.node1->X == i.node1->X && match.node1->Y == i.node1->Y)
-                && (match.node2->X == i.node2->X && match.node2->Y == i.node2->Y)
+            if ((nodes[match.node1Index].X == nodes[i.node1Index].X &&
+                 nodes[match.node1Index].Y == nodes[i.node1Index].Y)
+                && (nodes[match.node2Index].X == nodes[i.node2Index].X &&
+                    nodes[match.node2Index].Y == nodes[i.node2Index].Y)
                 && !i.hasBurnedDuringRound) {
-                if (i.node1->isNew || i.node2->isNew) {
+
+                if (nodes[i.node1Index].isNew || nodes[i.node2Index].isNew) {
                     i.timeAlreadyBurnt += minTime;
                     i.hasBurnedDuringRound = true;
                     continue;
                 }
-                if (i.node1->isBurnt && i.node2->isBurnt) {
+                if (nodes[i.node1Index].isBurnt && nodes[i.node2Index].isBurnt) {
                     i.timeAlreadyBurnt += (2 * minTime);
                     i.hasBurnedDuringRound = true;
                     continue;
@@ -200,33 +202,33 @@ void burnMatches(const vector<Match> &matchList, vector<Match> *figure) {
     }
 }
 
-void burnNodes(vector<Match> *figure, vector<Node *> *burningNodes) {
+void burnNodes(vector<Match> *figure, vector<Node *> *burningNodes, vector<Node> *nodes) {
     for (auto &m : *figure) {
         if (m.timeAlreadyBurnt == m.timeNeededToBurn) {
-            if (!m.node1->isBurnt) {
-                m.node1->isNew = true;
+            if (!(nodes->at(m.node1Index).isBurnt)) {
+                nodes->at(m.node1Index).isNew = true;
             }
-            m.node1->isBurnt = true;
-            if (!m.node2->isBurnt) {
-                m.node2->isNew = true;
+            nodes->at(m.node1Index).isBurnt = true;
+            if (!nodes->at(m.node2Index).isBurnt) {
+                nodes->at(m.node2Index).isNew = true;
             }
-            m.node2->isBurnt = true;
+            nodes->at(m.node2Index).isBurnt = true;
 
 
             //check if there is that node in the list and add it
-            if (!seeIfContainsNode(*burningNodes, *m.node1))
-                burningNodes->push_back(m.node1);
-            if (!seeIfContainsNode(*burningNodes, *m.node2))
-                burningNodes->push_back(m.node2);
+            if (!seeIfContainsNode(*burningNodes, nodes->at(m.node1Index)))
+                burningNodes->push_back(&nodes->at(m.node1Index));
+            if (!seeIfContainsNode(*burningNodes, nodes->at(m.node2Index)))
+                burningNodes->push_back(&nodes->at(m.node2Index));
         }
     }
 }
 
 void burnMatchesAndNodesInMap(vector<Node *> *burningNodes, map<Node *, vector<Match >> *nodeVectorMap,
-                              vector<Match> *figure) {
+                              vector<Match> *figure, vector<Node> *nodes) {
     for (auto &nvm: *nodeVectorMap) {
-        burnMatches(nvm.second, figure);
-        burnNodes(figure, burningNodes);
+        burnMatches(nvm.second, figure, *nodes);
+        burnNodes(figure, burningNodes, nodes);
     }
 }
 
@@ -240,18 +242,6 @@ void resetFigureAndNodes(vector<Match> *figure, vector<Node> *nodes) {
     }
 }
 
-vector<double> split(const string& str, char delimiter) {
-    vector<double> internal;
-    stringstream ss(str); // Turn the string into a stream.
-    string tok;
-
-    while (getline(ss, tok, delimiter)) {
-        internal.push_back(stod(tok));
-    }
-
-    return internal;
-}
-
 // main function
 int main() {
     int numberOfMatches;
@@ -260,7 +250,8 @@ int main() {
     vector<double> splitLine;
     string line;
     map<Node *, double> nodeResultMap;
-    Node *pNode1, *pNode2;
+
+    double x1, x2, y1, y2, time;
 
     //initalize vectors
     cout << "Kolko kebriteni klechki shte izpolzvate?" << endl;
@@ -269,34 +260,31 @@ int main() {
 
     for (int a = 0; a < numberOfMatches; a++) {
         cout << "Vuvedi Klechka: " << endl;
-        getline(cin, line);
-        splitLine = split(line, ' ');
-        pNode1 = addIfDoesntNodeExists(splitLine[0], splitLine[1], &nodes);
-        pNode2 = addIfDoesntNodeExists(splitLine[2], splitLine[3], &nodes);
-        cout << "addresss 0 Node (x,y): " << pNode1 << ",  " <<pNode2 << endl;
-        pNode1 = findNode(splitLine[0], splitLine[1], &nodes);
-        pNode2 = findNode(splitLine[0], splitLine[1], &nodes);
-        cout << "addresss 0 Node (x,y): " << pNode1 << ",  " <<pNode2 << endl;
+        cin >> x1 >> y1 >> x2 >> y2 >> time;
 
-        figure.push_back({pNode1,pNode2,splitLine[4], 0, false});
+        addIfDoesntNodeExists(x1, y1, &nodes);
+        addIfDoesntNodeExists(x2, y2, &nodes);
 
-        cout << "addresss 0 Node (x,y): " << &figure[0].node1 << ",  " <<&figure[0].node2 << endl;
+        int nodeIndex1 = findNodeIndex(x1, y1, nodes);
+        int nodeIndex2 = findNodeIndex(x2, y2, nodes);
 
+        figure.push_back({nodeIndex1, nodeIndex2, time, 0, false});
     }
-/*    for(const Node& node: nodes){
-        cout << " cooridinates Node 1 (x,y): " << node.X << ", " << node.Y << endl;
-    }*/
-
-    printFigure(figure, 0);
-
-/*    for (int k = 0; k < nodes.size(); k++) {
+    for (int k = 0; k < nodes.size(); k++) {
+        //int k = 2;
         double totalTime = 0;
         vector<Match> tempMatchList;
         vector<Node *> burningNodes;
         Node *startingNode = &nodes[k];
         map<Node *, vector<Match >> nodeVectorMap;
 
+        resetFigureAndNodes(&figure, &nodes);
+
+        //reseting minTime
+        minTime = numeric_limits<double>::max();
+
         //printing figure
+        cout << "start" << endl;
         printFigure(figure, totalTime);
 
         //connecting nodes
@@ -308,23 +296,24 @@ int main() {
 
         //starting burning from starting node
         tempMatchList = step(figure,
-                             startingNode); //-> finds min Time of next step returns matches connected to 'startingNode'
+                             startingNode,
+                             nodes); //-> finds min Time of next step returns matches connected to 'startingNode'
         totalTime = totalTime + minTime;
 
-        //burns percent of matches
-        burnMatches(tempMatchList, &figure);
+        //burns part of matches
+        burnMatches(tempMatchList, &figure, nodes);
 
         //burns nodes
-        burnNodes(&figure, &burningNodes);
+        burnNodes(&figure, &burningNodes, &nodes);
 
         printFigure(figure, totalTime);
 
         while (!areAllMatchesBurnt(figure)) {
             resetingForBegOFCycle(&figure, &nodes);
 
-            initalizeNodeVectorMap(&burningNodes, &nodeVectorMap, figure);
+            initalizeNodeVectorMap(&burningNodes, &nodeVectorMap, figure, nodes);
 
-            burnMatchesAndNodesInMap(&burningNodes, &nodeVectorMap, &figure);
+            burnMatchesAndNodesInMap(&burningNodes, &nodeVectorMap, &figure, &nodes);
 
             totalTime += minTime;
 
@@ -344,9 +333,10 @@ int main() {
     for (auto &nrm: nodeResultMap) {
         cout << j << ": " << nrm.second << " " << endl;
         j++;
-    }*/
+    }
     return 0;
 }
+
 /*    vector<Node> nodes{
             {0, 0, false},//0
             {2, 2, false},//1
