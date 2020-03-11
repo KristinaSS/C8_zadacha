@@ -24,22 +24,8 @@ struct Match {
     double timeNeededToBurn;
     double timeAlreadyBurnt;
     bool hasBurnedDuringRound;
+    bool isDiagonal;
 };
-
-double min(double x, double x1);
-
-double max(double x, double x1) {
-    if (x > x1)
-        return x;
-    else
-        return x1;
-}
-
-bool onSegment(const Node &p, const Node &q, const Node &r) {
-    return q.X <= max(p.X, r.X) && q.X >= min(p.X, r.X) &&
-           q.Y <= max(p.Y, r.Y) && q.Y >= min(p.Y, r.Y);
-
-}
 
 double min(double x, double x1) {
     if (x < x1)
@@ -66,21 +52,8 @@ bool doIntersect(const Node &p1, const Node &q1, const Node &p2, const Node &q2)
     int o4 = orientation(p2, q2, q1);
 
     // General case
-    if (o1 != o2 && o3 != o4)
-        return true;
+    return o1 != o2 && o3 != o4;
 
-    // Special Cases
-    // p1, q1 and p2 are colinear and p2 lies on segment p1q1
-    if (o1 == 0 && onSegment(p1, p2, q1)) return true;
-
-    // p1, q1 and q2 are colinear and q2 lies on segment p1q1
-    if (o2 == 0 && onSegment(p1, q2, q1)) return true;
-
-    // p2, q2 and p1 are colinear and p1 lies on segment p2q2
-    if (o3 == 0 && onSegment(p2, p1, q2)) return true;
-
-    // p2, q2 and q1 are colinear and q1 lies on segment p2q2
-    return o4 == 0 && onSegment(p2, q1, q2);
 }
 
 bool checkIfMatchOverlaps(double x1, double y1, double x2, double y2, const vector<Match> &figure, vector<Node> nodes) {
@@ -176,7 +149,7 @@ void printFigure(vector<Match> figure, double totalTime) {
     cout << "--------------------" << endl;
     cout << "+ min time: " << minTime << endl;
     for (int i = 0; i < figure.size(); i++) {
-        cout << "fig [" << i << "]: " << figure[i].timeAlreadyBurnt
+        cout << "fig [" << i << "]: " << figure[i].timeAlreadyBurnt /*<< figure[i].node1Index << figure[i].node2Index*/
              << endl;
     }
     cout << "total time: " << totalTime << endl;
@@ -321,17 +294,19 @@ void burnMatchesAndNodesInMap(vector<Node *> *burningNodes, map<Node *, vector<M
     }
 }
 
-// main function
-int main() {
+void eraseMatch(vector<Match> *figure, int nodeIndex1, int nodeIndex2) {
+    int index;
+    index = findMatchIndex(nodeIndex1, nodeIndex2, *figure);
+    figure->erase(figure->begin() + index);
+}
+
+void initializeFigureAndNodes(vector<Match> *figure, vector<Node> *nodes) {
     int numberOfMatches;
-    vector<Match> figure;
-    vector<Node> nodes;
     vector<double> splitLine;
     string line;
-    map<Node *, double> nodeResultMap;
     double x1, x2, y1, y2, time;
+    bool isDiagonal = true;
 
-    //initalize vectors
     cout << "Kolko kebriteni klechki shte izpolzvate?" << endl;
     getline(cin, line);
     numberOfMatches = std::stoi(line);
@@ -340,65 +315,107 @@ int main() {
         cout << "Vuvedi Klechka: " << endl;
         cin >> x1 >> y1 >> x2 >> y2 >> time;
 
-        if (checkIfMatchOverlaps(x1, y1, x2, y2, figure, nodes)) {
+        if (checkIfMatchOverlaps(x1, y1, x2, y2, *figure, *nodes)) {
             cout << "Match overlaps " << endl;
-            return -2;
+            exit(-1);
+        }
+        if (x1 == x2 || y1 == y2) {
+            isDiagonal = false;
         }
 
-        addIfDoesntNodeExists(x1, y1, &nodes);
-        addIfDoesntNodeExists(x2, y2, &nodes);
+        addIfDoesntNodeExists(x1, y1, nodes);
+        addIfDoesntNodeExists(x2, y2, nodes);
 
-        int nodeIndex1 = findNodeIndex(x1, y1, nodes);
-        int nodeIndex2 = findNodeIndex(x2, y2, nodes);
+        int nodeIndex1 = findNodeIndex(x1, y1, *nodes);
+        int nodeIndex2 = findNodeIndex(x2, y2, *nodes);
 
-        figure.push_back({nodeIndex1, nodeIndex2, time, 0, false});
+        figure->push_back({nodeIndex1, nodeIndex2, time, 0, false, isDiagonal});
+        isDiagonal = true;
     }
-    vector<Match> copyFigure = figure;
+}
+
+bool ifSkipMatch(vector<Node> nodes, Match match, Match match1) {
+    double x1, x2, y1, y2, x3, x4, y3, y4;
+    if (nodes[match.node1Index].X == nodes[match1.node1Index].X &&
+        nodes[match.node1Index].Y == nodes[match1.node1Index].Y &&
+        nodes[match.node2Index].X == nodes[match1.node2Index].X &&
+        nodes[match.node2Index].Y == nodes[match1.node2Index].Y) {
+        return true;
+    }
+    if (nodes[match.node2Index].X == nodes[match1.node2Index].X &&
+        nodes[match.node2Index].Y == nodes[match1.node2Index].Y &&
+        nodes[match.node1Index].X == nodes[match1.node1Index].X &&
+        nodes[match.node1Index].Y == nodes[match1.node1Index].Y) {
+        return true;
+    }
+
+    x1 = nodes[match.node1Index].X;
+    x2 = nodes[match.node2Index].X;
+    x3 = nodes[match1.node1Index].X;
+    x4 = nodes[match1.node2Index].X;
+    y1 = nodes[match.node1Index].Y;
+    y2 = nodes[match.node2Index].Y;
+    y3 = nodes[match1.node1Index].Y;
+    y4 = nodes[match1.node2Index].Y;
+
+    return ((x1 == x3 && y1 == y4 && (x1 - x4 == 1 || x1 - x4 == -1) && (y1 - y3 == 1 || y1 - y3 == -1)) ||
+            (x1 == x4 && y1 == y3 && (x1 - x3 == 1 || x1 - x3 == -1) && (y1 - y4 == 1 || y1 - y4 == -1))) &&
+           ((x2 == x3 && y2 == y4 && (x2 - x4 == 1 || x2 - x4 == -1) && (y2 - y3 == 1 || y2 - y3 == -1)) ||
+            (x2 == x4 && y2 == y3 && (x2 - x3 == 1 || x2 - x3 == -1) && (y2 - y4 == 1 || y2 - y4 == -1)));
+}
+
+void remakeFigureIfItHasDioganals(vector<Match> *figure, vector<Node> *nodes) {
     double x, y;
-    int matchIndex1 = 0, matchIndex2 = 0, nodeIndex;
+    int nodeIndex;
+    vector<Match> copyFigure = *figure;
 
     for (Match &match: copyFigure) {
         for (Match &match1 : copyFigure) {
-            if (nodes[match.node1Index].X == nodes[match1.node1Index].X &&
-                nodes[match.node1Index].Y == nodes[match1.node1Index].Y &&
-                nodes[match.node2Index].X == nodes[match1.node2Index].X &&
-                nodes[match.node2Index].Y == nodes[match1.node2Index].Y) {
+            if (ifSkipMatch(*nodes, match, match1))
                 continue;
-            }
-            if (nodes[match.node2Index].X == nodes[match1.node2Index].X &&
-                nodes[match.node2Index].Y == nodes[match1.node2Index].Y &&
-                nodes[match.node1Index].X == nodes[match1.node1Index].X &&
-                nodes[match.node1Index].Y == nodes[match1.node1Index].Y) {
-                continue;
-            }
-            if (doIntersect(nodes[match.node1Index], nodes[match.node2Index], nodes[match1.node1Index],
-                            nodes[match1.node2Index])) {
-                x = min(nodes[match.node1Index].X, nodes[match.node2Index].X);
+
+            if (doIntersect(nodes->at(match.node1Index), nodes->at(match.node2Index), nodes->at(match1.node1Index),
+                            nodes->at(match1.node2Index)) && match.isDiagonal && match1.isDiagonal) {
+                x = min(nodes->at(match.node1Index).X, nodes->at(match.node2Index).X);
                 x = x + 0.5;
-                y = min(nodes[match.node1Index].Y, nodes[match.node2Index].Y);
+                y = min(nodes->at(match.node1Index).Y, nodes->at(match.node2Index).Y);
                 y = y + 0.5;
 
-                nodes.push_back({x, y, false, false});
+                printFigure(*figure, 0);
 
-                nodeIndex = findNodeIndex(x, y, nodes);
+                if (!seeIfContainsNode(*nodes, x, y)) {
 
-                matchIndex1 = findMatchIndex(match.node1Index, match.node2Index, figure);
-                matchIndex2 = findMatchIndex(match1.node1Index, match1.node2Index, figure);
+                    nodes->push_back({x, y, false, false});
 
-                figure.push_back({match.node1Index, nodeIndex, match.timeNeededToBurn / 2, 0, false});
-                figure.push_back({match.node2Index, nodeIndex, match.timeNeededToBurn / 2, 0, false});
-                figure.push_back({match1.node1Index, nodeIndex, match1.timeNeededToBurn / 2, 0, false});
-                figure.push_back({match1.node2Index, nodeIndex, match1.timeNeededToBurn / 2, 0, false});
+                    nodeIndex = findNodeIndex(x, y, *nodes);
 
-                if (matchIndex1 != 0 && matchIndex2 != 0) {
-                    figure.erase(figure.begin() + matchIndex1);
-                    if (matchIndex1 < matchIndex2)
-                        matchIndex2 = matchIndex2 - 1;
-                    figure.erase(figure.begin() + matchIndex2);
+                    figure->push_back({match.node1Index, nodeIndex, match.timeNeededToBurn / 2, 0, false});
+                    figure->push_back({match.node2Index, nodeIndex, match.timeNeededToBurn / 2, 0, false});
+                    figure->push_back({match1.node1Index, nodeIndex, match1.timeNeededToBurn / 2, 0, false});
+                    figure->push_back({match1.node2Index, nodeIndex, match1.timeNeededToBurn / 2, 0, false});
+
+                    eraseMatch(figure, match.node1Index, match.node2Index);
+                    eraseMatch(figure, match1.node1Index, match1.node2Index);
                 }
             }
         }
     }
+}
+
+// main function
+int main() {
+    int checkIfConnected = 0;
+    vector<Match> figure;
+    vector<Node> nodes;
+    map<Node *, double> nodeResultMap;
+
+    //initalize vectors
+    initializeFigureAndNodes(&figure, &nodes);
+
+    //remake figure
+    remakeFigureIfItHasDioganals(&figure, &nodes);
+
+
     for (int k = 0; k < nodes.size(); k++) {
         double totalTime = 0;
         vector<Match> tempMatchList;
@@ -418,7 +435,7 @@ int main() {
         minTime = numeric_limits<double>::max();
 
         //printing figure
-        //printFigure(figure, totalTime);
+        printFigure(figure, totalTime);
 
         //connecting nodes
         fillNodesConnected(&nodes, figure);
@@ -441,8 +458,13 @@ int main() {
 
         //printFigure(figure, totalTime);
 
-        int checkIfConnected = 0;
+        checkIfConnected = 0;
         while (!areAllMatchesBurnt(figure)) {
+
+            if (checkIfConnected++ == 5000) {
+                cout << "Figurata ne e svurzana!" << endl;
+                return -1;
+            }
 
             resetingForBegOFCycle(&figure, &nodes);
 
@@ -455,17 +477,8 @@ int main() {
             nodeVectorMap.clear();
 
             //printFigure(figure, totalTime);
-            checkIfConnected++;
-
-            if (checkIfConnected == 5000) {
-                cout << "Figurata ne e svurzana!" << endl;
-                return -1;
-            }
         }
-
         nodeResultMap.insert({&nodes.at(k), totalTime});
-
-        resetFigureAndNodes(&figure, &nodes);
     }
     for (auto &nrm: nodeResultMap) {
 
