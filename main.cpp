@@ -336,6 +336,7 @@ void initializeFigureAndNodes(vector<Match> *figure, vector<Node> *nodes) {
 
 bool ifSkipMatch(vector<Node> nodes, Match match, Match match1) {
     double x1, x2, y1, y2, x3, x4, y3, y4;
+
     if (nodes[match.node1Index].X == nodes[match1.node1Index].X &&
         nodes[match.node1Index].Y == nodes[match1.node1Index].Y &&
         nodes[match.node2Index].X == nodes[match1.node2Index].X &&
@@ -359,9 +360,9 @@ bool ifSkipMatch(vector<Node> nodes, Match match, Match match1) {
     y4 = nodes[match1.node2Index].Y;
 
     return !(((x1 == x3 && y1 == y4 && (x1 - x4 == 1 || x1 - x4 == -1) && (y1 - y3 == 1 || y1 - y3 == -1)) ||
-            (x1 == x4 && y1 == y3 && (x1 - x3 == 1 || x1 - x3 == -1) && (y1 - y4 == 1 || y1 - y4 == -1))) &&
-           ((x2 == x3 && y2 == y4 && (x2 - x4 == 1 || x2 - x4 == -1) && (y2 - y3 == 1 || y2 - y3 == -1)) ||
-            (x2 == x4 && y2 == y3 && (x2 - x3 == 1 || x2 - x3 == -1) && (y2 - y4 == 1 || y2 - y4 == -1))));
+              (x1 == x4 && y1 == y3 && (x1 - x3 == 1 || x1 - x3 == -1) && (y1 - y4 == 1 || y1 - y4 == -1))) &&
+             ((x2 == x3 && y2 == y4 && (x2 - x4 == 1 || x2 - x4 == -1) && (y2 - y3 == 1 || y2 - y3 == -1)) ||
+              (x2 == x4 && y2 == y3 && (x2 - x3 == 1 || x2 - x3 == -1) && (y2 - y4 == 1 || y2 - y4 == -1))));
 }
 
 void remakeFigureIfItHasDioganals(vector<Match> *figure, vector<Node> *nodes) {
@@ -387,15 +388,19 @@ void remakeFigureIfItHasDioganals(vector<Match> *figure, vector<Node> *nodes) {
 
                     nodeIndex = findNodeIndex(x, y, *nodes);
 
+                    printFigure(*figure, -3);
+
                     figure->push_back({match.node1Index, nodeIndex, match.timeNeededToBurn / 2, 0, false});
                     figure->push_back({match.node2Index, nodeIndex, match.timeNeededToBurn / 2, 0, false});
                     figure->push_back({match1.node1Index, nodeIndex, match1.timeNeededToBurn / 2, 0, false});
                     figure->push_back({match1.node2Index, nodeIndex, match1.timeNeededToBurn / 2, 0, false});
 
+                    printFigure(*figure, -2);
+
                     eraseMatch(figure, match.node1Index, match.node2Index);
                     eraseMatch(figure, match1.node1Index, match1.node2Index);
                 }
-                printFigure(*figure, 0);
+                printFigure(*figure, -1);
             }
         }
     }
@@ -458,7 +463,7 @@ int main() {
 
         while (!areAllMatchesBurnt(figure)) {
 
-            if (totalTime >= numeric_limits<double>::max() ) {
+            if (totalTime >= numeric_limits<double>::max()) {
                 cout << "Figurata ne e svurzana!" << endl;
                 return -1;
             }
