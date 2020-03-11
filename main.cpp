@@ -358,10 +358,10 @@ bool ifSkipMatch(vector<Node> nodes, Match match, Match match1) {
     y3 = nodes[match1.node1Index].Y;
     y4 = nodes[match1.node2Index].Y;
 
-    return ((x1 == x3 && y1 == y4 && (x1 - x4 == 1 || x1 - x4 == -1) && (y1 - y3 == 1 || y1 - y3 == -1)) ||
+    return !(((x1 == x3 && y1 == y4 && (x1 - x4 == 1 || x1 - x4 == -1) && (y1 - y3 == 1 || y1 - y3 == -1)) ||
             (x1 == x4 && y1 == y3 && (x1 - x3 == 1 || x1 - x3 == -1) && (y1 - y4 == 1 || y1 - y4 == -1))) &&
            ((x2 == x3 && y2 == y4 && (x2 - x4 == 1 || x2 - x4 == -1) && (y2 - y3 == 1 || y2 - y3 == -1)) ||
-            (x2 == x4 && y2 == y3 && (x2 - x3 == 1 || x2 - x3 == -1) && (y2 - y4 == 1 || y2 - y4 == -1)));
+            (x2 == x4 && y2 == y3 && (x2 - x3 == 1 || x2 - x3 == -1) && (y2 - y4 == 1 || y2 - y4 == -1))));
 }
 
 void remakeFigureIfItHasDioganals(vector<Match> *figure, vector<Node> *nodes) {
@@ -381,8 +381,6 @@ void remakeFigureIfItHasDioganals(vector<Match> *figure, vector<Node> *nodes) {
                 y = min(nodes->at(match.node1Index).Y, nodes->at(match.node2Index).Y);
                 y = y + 0.5;
 
-                printFigure(*figure, 0);
-
                 if (!seeIfContainsNode(*nodes, x, y)) {
 
                     nodes->push_back({x, y, false, false});
@@ -397,6 +395,7 @@ void remakeFigureIfItHasDioganals(vector<Match> *figure, vector<Node> *nodes) {
                     eraseMatch(figure, match.node1Index, match.node2Index);
                     eraseMatch(figure, match1.node1Index, match1.node2Index);
                 }
+                printFigure(*figure, 0);
             }
         }
     }
@@ -404,7 +403,6 @@ void remakeFigureIfItHasDioganals(vector<Match> *figure, vector<Node> *nodes) {
 
 // main function
 int main() {
-    int checkIfConnected = 0;
     vector<Match> figure;
     vector<Node> nodes;
     map<Node *, double> nodeResultMap;
@@ -456,12 +454,11 @@ int main() {
         //burns nodes
         burnNodes(&figure, &burningNodes, &nodes);
 
-        //printFigure(figure, totalTime);
+        printFigure(figure, totalTime);
 
-        checkIfConnected = 0;
         while (!areAllMatchesBurnt(figure)) {
 
-            if (checkIfConnected++ == 5000) {
+            if (totalTime >= numeric_limits<double>::max() ) {
                 cout << "Figurata ne e svurzana!" << endl;
                 return -1;
             }
@@ -476,7 +473,7 @@ int main() {
 
             nodeVectorMap.clear();
 
-            //printFigure(figure, totalTime);
+            printFigure(figure, totalTime);
         }
         nodeResultMap.insert({&nodes.at(k), totalTime});
     }
