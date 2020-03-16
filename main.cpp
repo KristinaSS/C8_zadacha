@@ -388,19 +388,19 @@ void remakeFigureIfItHasDioganals(vector<Match> *figure, vector<Node> *nodes) {
 
                     nodeIndex = findNodeIndex(x, y, *nodes);
 
-                    printFigure(*figure, -3);
+                    //printFigure(*figure, -3);
 
                     figure->push_back({match.node1Index, nodeIndex, match.timeNeededToBurn / 2, 0, false});
                     figure->push_back({match.node2Index, nodeIndex, match.timeNeededToBurn / 2, 0, false});
                     figure->push_back({match1.node1Index, nodeIndex, match1.timeNeededToBurn / 2, 0, false});
                     figure->push_back({match1.node2Index, nodeIndex, match1.timeNeededToBurn / 2, 0, false});
 
-                    printFigure(*figure, -2);
+                    //printFigure(*figure, -2);
 
                     eraseMatch(figure, match.node1Index, match.node2Index);
                     eraseMatch(figure, match1.node1Index, match1.node2Index);
                 }
-                printFigure(*figure, -1);
+               // printFigure(*figure, -1);
             }
         }
     }
@@ -419,10 +419,10 @@ int main() {
     remakeFigureIfItHasDioganals(&figure, &nodes);
     int i = 0;
 
-    for(const Node& node: nodes){
+/*    for(const Node& node: nodes){
         cout <<i<< " " << node.X << " "<< node.Y << endl;
         i++;
-    }
+    }*/
 
     for (int k = 0; k < nodes.size(); k++) {
         double totalTime = 0;
@@ -432,10 +432,10 @@ int main() {
         Node *startingNode = &nodes[k];
 
         //checks if starting node is a whole number
-    /*    if (floor(nodes[k].X) != nodes[k].X)
+        if (floor(nodes[k].X) != nodes[k].X)
             continue;
         if (floor(nodes[k].Y) != nodes[k].Y)
-            continue;*/
+            continue;
 
         //reseting stuff
         resetingForBegOFCycle(&figure, &nodes);
@@ -443,7 +443,7 @@ int main() {
         minTime = numeric_limits<double>::max();
 
         //printing figure
-        printFigure(figure, totalTime);
+        //printFigure(figure, totalTime);
 
         //connecting nodes
         fillNodesConnected(&nodes, figure);
@@ -464,7 +464,7 @@ int main() {
         //burns nodes
         burnNodes(&figure, &burningNodes, &nodes);
 
-        printFigure(figure, totalTime);
+        //printFigure(figure, totalTime);
 
         while (!areAllMatchesBurnt(figure)) {
 
@@ -483,7 +483,7 @@ int main() {
 
             nodeVectorMap.clear();
 
-            printFigure(figure, totalTime);
+            //printFigure(figure, totalTime);
         }
         nodeResultMap.insert({&nodes.at(k), totalTime});
     }
