@@ -149,7 +149,7 @@ void printFigure(vector<Match> figure, double totalTime) {
     cout << "--------------------" << endl;
     cout << "+ min time: " << minTime << endl;
     for (int i = 0; i < figure.size(); i++) {
-        cout << "fig [" << i << "]: " << figure[i].timeAlreadyBurnt /*<< figure[i].node1Index << figure[i].node2Index*/
+        cout << "fig [" << i << "]: " << figure[i].timeAlreadyBurnt<< " "<< figure[i].node1Index << figure[i].node2Index
              << endl;
     }
     cout << "total time: " << totalTime << endl;
@@ -417,7 +417,12 @@ int main() {
 
     //remake figure
     remakeFigureIfItHasDioganals(&figure, &nodes);
+    int i = 0;
 
+    for(const Node& node: nodes){
+        cout <<i<< " " << node.X << " "<< node.Y << endl;
+        i++;
+    }
 
     for (int k = 0; k < nodes.size(); k++) {
         double totalTime = 0;
@@ -427,10 +432,10 @@ int main() {
         Node *startingNode = &nodes[k];
 
         //checks if starting node is a whole number
-        if (floor(nodes[k].X) != nodes[k].X)
+    /*    if (floor(nodes[k].X) != nodes[k].X)
             continue;
         if (floor(nodes[k].Y) != nodes[k].Y)
-            continue;
+            continue;*/
 
         //reseting stuff
         resetingForBegOFCycle(&figure, &nodes);
