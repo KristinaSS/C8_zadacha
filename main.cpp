@@ -8,7 +8,7 @@
 
 using namespace std;
 
-// Number of nodes
+// Min time needed
 double minTime = numeric_limits<double>::max();
 
 //Node: the edges of each match, has x,y coordinates, keeps track if it is burned,
